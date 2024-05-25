@@ -43,6 +43,27 @@
 	errno = saved_errno;		\
 } while (0)
 
+static inline __u16 get_unaligned_le16(const void *ptr)
+{
+	__u16 tmp;
+	memcpy(&tmp, ptr, sizeof(__u16));
+	return le16_to_cpu(tmp);
+}
+
+static inline __u32 get_unaligned_le32(const void *ptr)
+{
+	__u32 tmp;
+	memcpy(&tmp, ptr, sizeof(__u32));
+	return le32_to_cpu(tmp);
+}
+
+static inline __u64 get_unaligned_le64(const void *ptr)
+{
+	__u64 tmp;
+	memcpy(&tmp, ptr, sizeof(__u64));
+	return le64_to_cpu(tmp);
+}
+
 /*
  * Accessors of search header that is commonly mapped to a byte buffer so the
  * alignment is not guraranteed
