@@ -281,6 +281,7 @@ static int noinline find_search_start(struct btrfs_root *root,
 			      u64 *start_ret, int num, u64 profile)
 {
 	int ret;
+	struct btrfs_fs_info *fs_info = root->fs_info;
 	struct btrfs_block_group *cache = *cache_ret;
 	u64 last = *start_ret;
 	u64 start = 0;
@@ -299,18 +300,21 @@ again:
 	if (cache->ro || !block_group_bits(cache, profile))
 		goto new_group;
 
-	if (btrfs_is_zoned(root->fs_info)) {
+	if (btrfs_is_zoned(fs_info)) {
 		if (cache->zone_capacity - cache->alloc_offset < num)
 			goto new_group;
+		if (fs_info->active_zone_tracking) {
+			if (!cache->zone_is_active) {
+			}
+		}
 		*start_ret = cache->start + cache->alloc_offset;
 		cache->alloc_offset += num;
 		return 0;
 	}
 
 	while(1) {
-		ret = find_first_extent_bit(&root->fs_info->free_space_cache,
-					    last, &start, &end, EXTENT_DIRTY,
-					    NULL);
+		ret = find_first_extent_bit(&fs_info->free_space_cache, last,
+					    &start, &end, EXTENT_DIRTY, NULL);
 		if (ret) {
 			goto new_group;
 		}
@@ -328,7 +332,7 @@ again:
 	}
 out:
 	*start_ret = last;
-	cache = btrfs_lookup_block_group(root->fs_info, search_start);
+	cache = btrfs_lookup_block_group(fs_info, search_start);
 	if (!cache) {
 		printk("Unable to find block group for %llu\n",
 			(unsigned long long)search_start);
@@ -339,7 +343,7 @@ out:
 new_group:
 	last = cache->start + cache->length;
 wrapped:
-	cache = btrfs_lookup_first_block_group(root->fs_info, last);
+	cache = btrfs_lookup_first_block_group(fs_info, last);
 	if (!cache) {
 		if (!wrapped) {
 			wrapped = 1;
