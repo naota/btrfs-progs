@@ -26,6 +26,7 @@ DEBUG=false
 # Defaults
 SIZE='2048'
 ZONESIZE='256'
+NUM_CONVENTIONAL='0'
 SYSFS='/sys/kernel/config/nullb'
 
 # create
@@ -134,6 +135,24 @@ function _parse_zone_size() {
 	echo -en "$zonesize"
 }
 
+function _parse_num_conventional_zones() {
+	local num_conventional="$NUM_CONVENTIONAL"
+	_dbg "parse number of conventional $@"
+	while [ $# -gt 0 ]; do
+		_dbg "ARG: $1"
+		if [ "$1" = '-c' ]; then
+			num_conventional="$2"
+			if [ -z "$num_conventional" ]; then
+				_error "-c requires number of conventional"
+			fi
+			shift
+		fi
+		shift
+	done
+
+	echo -en "$num_conventional"
+}
+
 # main()
 
 if [ "$CMD" = 'setup' ]; then
@@ -151,6 +170,7 @@ if [ "$CMD" = 'create' ]; then
 	size=$(_parse_device_size "$@")
 	# size in MB
 	zonesize=$(_parse_zone_size "$@")
+	num_conventional=$(_parse_num_conventional_zones "$@")
 	_msg "Create nullb$index"
 	_check_cd "$SYSFS"
 	if mkdir "$name"; then
@@ -159,6 +179,7 @@ if [ "$CMD" = 'create' ]; then
 		echo 1 > zoned
 		echo 1 > memory_backed
 		echo "$zonesize" > zone_size
+		echo "$num_conventional" > zone_nr_conv
 		echo 1 > power
 		node=$(cat "$SYSFS/$name/index")
 		node="nullb${node}"

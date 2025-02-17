@@ -933,7 +933,7 @@ cond_wait_for_loopdevs() {
 setup_nullbdevs()
 {
 	if [ "$#" -lt 3 ]; then
-		_fail "setup_nullbdevs <number of device> <size> <zone size>"
+		_fail "setup_nullbdevs <number of device> <size> <zone size> [<number of conventional zones>]"
 	fi
 
 	setup_root_helper
@@ -947,6 +947,8 @@ setup_nullbdevs()
 	nullb_count="$1"
 	nullb_size="$2"
 	nullb_zone_size="$3"
+	nullb_nconv="$4"
+	[[ -z "$nullb_nconv" ]] && nullb_nconv=0
 	declare -a nullb_devs
 }
 
@@ -962,7 +964,7 @@ prepare_nullbdevs()
 
 	for i in `seq "$nullb_count"`; do
 		# Last line has the name of the device node path
-		out=$(run_check_stdout $SUDO_HELPER "$nullb" create -s "$nullb_size" -z "$nullb_zone_size")
+		out=$(run_check_stdout $SUDO_HELPER "$nullb" create -s "$nullb_size" -z "$nullb_zone_size" -c "$nullb_nconv")
 		if [ $? != 0 ]; then
 			_fail "cannot create nullb zoned device $i"
 		fi
@@ -984,6 +986,20 @@ cleanup_nullbdevs()
 		name=$(basename "$dev")
 		run_check $SUDO_HELPER "$nullb" rm "$name"
 	done
+	unset nullb_devs
+}
+
+wait_for_nullbdevs()
+{
+	for dev in ${nullb_devs[@]}; do
+		run_mayfail $SUDO_HELPER "$TOP/btrfs" device ready "$dev"
+	done
+}
+
+cond_wait_for_nullbdevs() {
+	if [ -n "${nullb_devs[1]}" ]; then
+		wait_for_nullbdevs
+	fi
 }
 
 init_env()
